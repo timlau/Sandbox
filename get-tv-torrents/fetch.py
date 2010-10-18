@@ -25,7 +25,7 @@ from urlparse import urlparse
 from datetime import date, timedelta
 
 debug = False
-start_date = date.today() - timedelta(days=14) # 14 days ago
+start_date = date.today() - timedelta(days=21) # 14 days ago
 
 
 
@@ -82,7 +82,7 @@ for line in store:
                                 #os.system('transmission-remote 192.168.0.222:9091 --add torrents%s' % url.path)
                                 print(" ----> Added %s" % entry.title)
                 else:
-                    if debug: print " -----> Skipping :  Feed : %s  Store: %s) " % (time.asctime(entry.updated_parsed), time.asctime(store[line]))
+                    if debug: print " -----> Skipping :  Feed : %s  Store: %s) " % (time.asctime(entry.updated_parsed),time.asctime(store[line]))
         store[line] = last
 
 store.close()
