@@ -30,7 +30,7 @@ start_date = date.today() - timedelta(days=21) # 14 days ago
 
 
 def get_feed_url(serie, season):
-    url ="http://ezrss.it/search/index.php?show_name=%s&date=&quality=HDTV&release_group=&episode_title=&season=%s&episode=&video_format=XVID&audio_format=&modifier=&mode=rss" % (serie, season)
+    url ="http://ezrss.it/search/index.php?show_name=%s&quality=HDTV&season=%s&video_format=XVID&mode=rss" % (serie, season)
     return url
 
 #base = os.getenv('HOME') + '/tvrss'
@@ -44,6 +44,7 @@ series = []
 for line in lines:
     serie,season = line.split(",")
     if debug: print " --> Serie : %-40s Season : %-4s " % (serie,season)    
+    serie = serie.replace(" ", "%20") # convert spaces to url spaces
     series.append("%s-%s" % (serie,season))
 
 store = shelve.open(base + "/feeds.store", writeback=True)
@@ -66,7 +67,7 @@ os.chdir(base)
 print "Reading feeds"
 for line in store:
         serie,season = line.split("-")
-        print " --> Serie : %-40s Season : %-4s " % (serie,season)    
+        print " --> Serie : %-40s Season : %-4s " % (serie.replace("%20"," "),season)    
         feed_url = get_feed_url(serie,season)
         feed = feedparser.parse(feed_url)
         last = store[line]
@@ -75,6 +76,7 @@ for line in store:
                 if debug: print " --> Torrent : %s " % url.path[1:]
                 if store[line] < entry.updated_parsed:
                         command = base_command % ("torrents%s" % url.path, entry.link, entry.link)
+			if debug: print command 
                         if os.system(command) != 0:
                                 print(" ----> Failed to add %s (%s)" % (entry.title, entry.link))
                         elif last < entry.updated_parsed:
