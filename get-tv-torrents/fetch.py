@@ -75,14 +75,13 @@ for line in store:
                 url = urlparse(entry.link)
                 if debug: print " --> Torrent : %s " % url.path[1:]
                 if store[line] < entry.updated_parsed:
-                        command = base_command % ("torrents%s" % url.path, entry.link, entry.link)
-			if debug: print command 
-                        if os.system(command) != 0:
-                                print(" ----> Failed to add %s (%s)" % (entry.title, entry.link))
-                        elif last < entry.updated_parsed:
-                                last = entry.updated_parsed
-                                #os.system('transmission-remote 192.168.0.222:9091 --add torrents%s' % url.path)
-                                print(" ----> Added %s" % entry.title)
+                    command = base_command % ("torrents%s" % url.path, entry.link, entry.link)
+                    if os.system(command) != 0:
+                        print(" ----> Failed to add %s (%s)" % (entry.title, entry.link))
+                    elif last < entry.updated_parsed:
+                        last = entry.updated_parsed
+                        #os.system('transmission-remote 192.168.0.222:9091 --add torrents%s' % url.path)
+                        print(" ----> Added %s" % entry.title)
                 else:
                     if debug: print " -----> Skipping :  Feed : %s  Store: %s) " % (time.asctime(entry.updated_parsed),time.asctime(store[line]))
         store[line] = last
