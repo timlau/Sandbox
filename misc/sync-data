@@ -1,0 +1,4 @@
+#!/bin/bash
+
+remote-sync --host=yum-extender.org /home/timlau/Documents/zim sync/zim
+

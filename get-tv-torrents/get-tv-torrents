@@ -21,6 +21,7 @@ just run 'python fetch.py' to download the lastest torrents.
 
 import os, time, shelve, feedparser
 from urlparse import urlparse
+import os.path
 
 from datetime import date, timedelta
 
@@ -33,8 +34,10 @@ def get_feed_url(serie, season):
     url ="http://ezrss.it/search/index.php?show_name=%s&quality=HDTV&season=%s&video_format=XVID&mode=rss" % (serie, season)
     return url
 
-#base = os.getenv('HOME') + '/tvrss'
-base = '.'
+base = os.getenv('HOME') + '/.get-tv-torrents'
+if not os.path.exists(base):
+    os.makedirs(base)
+    os.makedirs(base + '/torrents')
 
 print "Reading active series"
 file = open(base + "/series")
@@ -80,7 +83,7 @@ for line in store:
                         print(" ----> Failed to add %s (%s)" % (entry.title, entry.link))
                     elif last < entry.updated_parsed:
                         last = entry.updated_parsed
-                        #os.system('transmission-remote 192.168.0.222:9091 --add torrents%s' % url.path)
+                        os.system('transmission-remote localhost:9091 --add torrents%s' % url.path)
                         print(" ----> Added %s" % entry.title)
                 else:
                     if debug: print " -----> Skipping :  Feed : %s  Store: %s) " % (time.asctime(entry.updated_parsed),time.asctime(store[line]))

@@ -2,7 +2,8 @@
 fasLogin=timlau
 repoLocalDir=~/udv/repos
 repoName=yumex
-declare -a branch=(fedora-13 fedora-14)
+rawhide=fedora-15
+declare -a branch=(fedora-13 fedora-14 epel-6)
 declare -a rpmdir=(i386 x86_64)
 declare -a rsyncParam=(-avtz --delete)
 

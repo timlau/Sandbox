@@ -1,0 +1,3 @@
+#!/bin/bash
+sudo mount /mnt/movies
+rsync -r -t -v --progress --ignore-existing -s /home/timlau/Videos/movies /mnt/movies
