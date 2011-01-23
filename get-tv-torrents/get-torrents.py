@@ -13,7 +13,7 @@ last_episode = 0
 torrents will be download to a directory named tv-torrents/ under ~/Download/tv-torrents.
 You must create that your self.
 
-just run 'python fetch.py' to download the lastest torrents.
+just run './get-torrents.py' to download the lastest torrents.
 
 '''
 
