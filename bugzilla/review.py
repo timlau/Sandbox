@@ -12,6 +12,8 @@ BZ_URL='https://bugzilla.redhat.com/xmlrpc.cgi'
 TRYTON_SOURCE_URL = "http://downloads.tryton.org/%(tryton_major)s/%(pkgname)s-%(version)s.tar.gz"
 TRYTON_MAYOR = '1.8'
 
+TEST_BUG=672280
+
 class SpecFile:
     def __init__(self, filename):
         self.filename = filename
@@ -54,13 +56,18 @@ class SpecFile:
                         setattr(self,attr, value)
         
 class PackageReview:
-    def __init__(self,bug):
+    def __init__(self,bug,user=None,password=None):
         self.bug_num = bug
         self.spec_url = None
         self.srpm_url = None
         self.spec_file = None
         self.srpm_file = None
         self.bugzilla = Bugzilla(url=BZ_URL)
+        self.login = False
+        if user and password:
+            self.bugzilla.login(user=user, password=password)
+            self.login = True
+        self.user = user
         self.bug = self.bugzilla.getbug(self.bug_num)
         self.spec = None
 
@@ -74,8 +81,24 @@ class PackageReview:
                         if url.endswith(".spec"):
                             self.spec_url = url
                         elif url.endswith(".src.rpm"):
+
                             self.srpm_url = url
-                            
+
+    def assign_bug(self):    
+        if self.login:
+            self.bug.setstatus('ASSIGNED')
+            self.bug.setassignee(assigned_to=self.user)
+            self.bug.addcomment('I will review this bug')
+        else:
+            print("You need to login before assigning a bug")
+
+    def add_comment(self,comment):    
+        if self.login:
+            self.bug.addcomment(comment)
+        else:
+            print("You need to login before commenting on a bug")
+
+
     def _check_upstream_md5(self):
         values = {
                   'tryton_major' : TRYTON_MAYOR,
@@ -195,8 +218,19 @@ class PackageReview:
                 print("Can't download spec : %s " % self.srpm_url )                            
             
 if __name__ == "__main__":
-    review = PackageReview(671434)
+    if len(sys.argv) != 2:
+        print "Usage : review.py <bugzilla user> <bugzilla password)"
+        sys.exit(1)
+    user = sys.argv[1]
+    password = sys.argv[2]
+    review = PackageReview(671434, user=user, password=password)
     review.process()
+#    bugzilla = Bugzilla(url=BZ_URL)
+#    bugzilla.login(user=user, password=password)
+#    bug = bugzilla.getbug(TEST_BUG)
+#    bug.setstatus('ASSIGNED')
+#    bug.setassignee(assigned_to='tla@rasmil.dk')
+#    bug.addcomment('Tis is a test comment')
             
             
             
