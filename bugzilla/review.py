@@ -6,6 +6,7 @@ from subprocess import call, Popen
 from urlparse import urlparse
 import os.path
 import re
+import glob
 
 BZ_URL='https://bugzilla.redhat.com/xmlrpc.cgi'
 TRYTON_SOURCE_URL = "http://downloads.tryton.org/%(tryton_major)s/%(pkgname)s-%(version)s.tar.gz"
@@ -141,13 +142,48 @@ class PackageReview:
             check = "!"
         print "[%s]  Sources used to build the package matches the upstream source, as provided in the spec URL." % check
         print "     MD5SUM this package     : %s" % local
-        print "     MD5SUM upstream package : %s" % upstream                
+        print "     MD5SUM upstream package : %s" % upstream     
+        
+    def srpm_rpmlint(self):
+        cmd = 'rpmlint %s' % self.srpm_file
+        print "rpmlint (srpm) : %s" % os.path.basename(cmd)
+        print 75 * '-'
+        out = self._run_cmd(cmd)           
+        print out
+        print 75 * '-'
 
+    def rpm_rpmlint(self):
+        rpms = glob.glob(os.path.expanduser('~/rpmbuild/RPMS/*/*.rpm'))
+        for rpm in rpms:
+            cmd = 'rpmlint %s' % rpm
+            print "rpmlint  : %s" % os.path.basename(cmd)
+            print 75 * '-'
+            out = self._run_cmd(cmd)           
+            print out
+            print 75 * '-'
+
+    def build(self):
+        call('rpmdev-wipetree &>/dev/null',shell = True)
+        call('sudo yum-builddep -y %s &>yum.log' % self.srpm_file, shell = True)
+        rc = call('rpmbuild --rebuild %s &>build.log' % self.srpm_file, shell = True)
+        msg = "[%s]  Package successfully compiles and builds into binary rpms on at least one supported architecture."
+        if rc == 0:
+            check = "x"
+            print msg % check
+            return True
+        else:
+            check = "!"
+            print msg % check
+            return False
+    
     def process(self):
         self.find_urls()
         if self.download_files():
             self.spec = SpecFile(self.spec_file)
             self.check_md5()
+            if self.build():
+                self.srpm_rpmlint()
+                self.rpm_rpmlint()
         else:
             if not self.spec_url:
                 print("no spec file found in bugzilla report #%s" % self.bug_num)
