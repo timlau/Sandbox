@@ -110,15 +110,20 @@ class PackageReview:
         if self.spec_url and self.srpm_url:
             self.spec_file = self._get_file(self.spec_url)
             self.srpm_file = self._get_file(self.srpm_url)
-            return True
-        else:
-            return False
+            if self.spec_file and self.srpm_file:
+                return True
+        return False
 
     def _get_file(self, link):
+        if not os.path.exists("work/"):
+            os.makedirs('work/')
         url = urlparse(link)
         fname = os.path.basename(url.path)
         call('wget --quiet --tries=1 --read-timeout=90 -O work/%s --referer=%s %s' % (fname, link, link) , shell=True)
-        return "work/%s" % fname
+        if os.path.exists("work/%s" % fname):
+            return "work/%s" % fname
+        else:
+            return None
 
     def _check_local_md5(self):
         call('rpmdev-wipetree &>/dev/null', shell=True)
@@ -147,7 +152,11 @@ class PackageReview:
             if not self.spec_url:
                 print("no spec file found in bugzilla report #%s" % self.bug_num)
             if not self.srpm_url:
-                print("no srpm file found in bugzilla report #%s" % self.bug_num)                            
+                print("no srpm file found in bugzilla report #%s" % self.bug_num)
+            if not self.spec_file:
+                print("Can't download spec : %s " % self.spec_url )                            
+            if not self.srpm_file:
+                print("Can't download spec : %s " % self.srpm_url )                            
             
 if __name__ == "__main__":
     review = PackageReview(671434)
