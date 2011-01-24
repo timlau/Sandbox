@@ -8,6 +8,8 @@ import os.path
 import re
 
 BZ_URL='https://bugzilla.redhat.com/xmlrpc.cgi'
+TRYTON_SOURCE_URL = "http://downloads.tryton.org/%(tryton_major)s/%(pkgname)s-%(version)s.tar.gz"
+TRYTON_MAYOR = '1.8'
 
 class SpecFile:
     def __init__(self, filename):
@@ -23,9 +25,8 @@ class SpecFile:
              f and f.close()
              
     def get_from_spec(self, macro):
-        
-        qf = '%{' + macro.upper() + "}"
-        print qf
+        ''' Use a rpm to quiry for a value'''
+        qf = '%{' + macro.upper() + "}" # The RPM tag to search for
          # get the name
         cmd = ['rpm', '-q', '--qf', qf, '--specfile', self.filename]
                 # Run the command
@@ -50,7 +51,6 @@ class SpecFile:
                     if res:
                         value = res.group(1)
                         setattr(self,attr, value)
-                        print "%s : %s" % (attr,value)
         
 class PackageReview:
     def __init__(self,bug):
@@ -61,6 +61,7 @@ class PackageReview:
         self.srpm_file = None
         self.bugzilla = Bugzilla(url=BZ_URL)
         self.bug = self.bugzilla.getbug(self.bug_num)
+        self.spec = None
 
     def find_urls(self):
         if self.bug.longdescs:
@@ -73,6 +74,37 @@ class PackageReview:
                             self.spec_url = url
                         elif url.endswith(".src.rpm"):
                             self.srpm_url = url
+                            
+    def _check_upstream_md5(self):
+        values = {
+                  'tryton_major' : TRYTON_MAYOR,
+                  'pkgname' : self.spec.name.replace("-","_"),
+                  'version' : self.spec.version
+                  }
+        url = TRYTON_SOURCE_URL % values
+        src = self._get_file(url)
+        sum ,file = self._md5sum(src)      
+        return sum 
+                            
+    def _run_cmd(self, cmd):
+        cmd = cmd.split(' ')
+        try:
+            proc = Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, error = proc.communicate()
+        except OSError, e:
+            print "OSError : %s" % str(e)
+        return output
+    
+    
+    def _md5sum(self, file):
+        cmd = "md5sum %s" % file
+        out = self._run_cmd(cmd)
+        lines = out.split(' ',1)
+        if len(lines) == 2:
+            return lines[0], lines[1][1:-1]
+        else:
+            return None,out
+                            
                             
     def download_files(self):
         if self.spec_url and self.srpm_url:
@@ -88,19 +120,29 @@ class PackageReview:
         call('wget --quiet --tries=1 --read-timeout=90 -O work/%s --referer=%s %s' % (fname, link, link) , shell=True)
         return "work/%s" % fname
 
-    def install_srpm(self):
-        call('rpmdev-wipetree 2>1 1>/dev/null', shell=True)
-        call('rpm -ivh %s 2>1 1>/dev/null' % self.srpm_file, shell=True)
-        call('md5sum ~/rpmbuild/SOURCES/*.tar.gz', shell=True)
-            
+    def _check_local_md5(self):
+        call('rpmdev-wipetree &>/dev/null', shell=True)
+        call('rpm -ivh %s &>/dev/null' % self.srpm_file, shell=True)
+        src = os.path.expanduser('~/rpmbuild/SOURCES/%s-%s.tar.gz' % (self.spec.name.replace("-","_"), self.spec.version))
+        sum,file = self._md5sum(src)      
+        return sum
+    
+    def check_md5(self):
+        local = self._check_local_md5()
+        upstream = self._check_upstream_md5()
+        if local == upstream:
+            check = "x"
+        else:
+            check = "!"
+        print "[%s]  Sources used to build the package matches the upstream source, as provided in the spec URL." % check
+        print "     MD5SUM this package     : %s" % local
+        print "     MD5SUM upstream package : %s" % upstream                
 
     def process(self):
         self.find_urls()
         if self.download_files():
-            self.install_srpm()
-            spec = SpecFile(self.spec_file)
-            print spec.name, spec.version, spec.release
-            spec.parse()
+            self.spec = SpecFile(self.spec_file)
+            self.check_md5()
         else:
             if not self.spec_url:
                 print("no spec file found in bugzilla report #%s" % self.bug_num)
